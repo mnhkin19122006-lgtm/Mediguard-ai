@@ -21,6 +21,7 @@ python-multipart==0.0.9
 
 # LLM & AI SDKs
 google-generativeai==0.5.0
+google-genai>=0.1.1
 openai==1.14.3
 instructor==1.1.2
 

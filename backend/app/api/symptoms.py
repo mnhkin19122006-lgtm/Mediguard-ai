@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, date
+from app.core.datetime_utils import utc_now, utc_now_iso
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -187,7 +188,7 @@ async def report_symptom(
         caregiver_notified=True,
         caregiver_confirmed=False,
         action_taken=action_text,
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.add(symptom_entry)
 
@@ -197,7 +198,7 @@ async def report_symptom(
         event_type="alert",
         response_content=raw_name,
         notes=f"Cảnh báo triệu chứng theo ngày ({today_str}): {symptom_title} - Mức độ: {severity}",
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.add(audit_log)
     db.commit()
@@ -309,7 +310,7 @@ def confirm_symptom(
         "elder_id": symptom.elder_id,
         "confirmed_by": confirmed_by_id,
         "notes": req.notes,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": utc_now_iso()
     })
 
     return {

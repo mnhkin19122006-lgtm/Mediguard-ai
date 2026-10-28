@@ -4,6 +4,7 @@ import sys
 import os
 import webbrowser
 import time
+import shutil
 
 def main():
     print("=" * 60)
@@ -13,8 +14,20 @@ def main():
     
     cloudflared_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cloudflared.exe")
     if not os.path.exists(cloudflared_bin):
-        print("[!] Khong tim thay cloudflared.exe. Vui long kiem tra lai thu muc.")
-        sys.exit(1)
+        system_bin = shutil.which("cloudflared")
+        if system_bin:
+            cloudflared_bin = system_bin
+        else:
+            print("[*] Dang tu dong tai cloudflared.exe tu Cloudflare GitHub Release...")
+            try:
+                import urllib.request
+                dl_url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+                urllib.request.urlretrieve(dl_url, cloudflared_bin)
+                print("[V] Da tai thanh cong cloudflared.exe!")
+            except Exception as e:
+                print(f"[!] Khong the tu dong tai cloudflared.exe: {e}")
+                print("    Vui long tai thu cong tu https://github.com/cloudflare/cloudflared/releases va copy vao thu muc du an.")
+                sys.exit(1)
         
     print("[2/3] Dang tao duong ham Cloudflare Tunnel toi http://localhost:5173...")
     cmd = [cloudflared_bin, "tunnel", "--url", "http://localhost:5173"]

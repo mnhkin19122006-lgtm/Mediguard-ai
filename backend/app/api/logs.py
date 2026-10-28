@@ -2,6 +2,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from datetime import datetime
+from app.core.datetime_utils import utc_now
 
 from app.database import get_db
 from app.models.interaction_log import InteractionLog
@@ -100,7 +101,7 @@ def caregiver_confirm(
         event_type="caregiver_confirmed",
         confirmed_by=confirmed_by_id,
         notes=req.notes or "Người nhà đã đối chiếu và xác nhận an toàn",
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.add(log_entry)
     db.commit()

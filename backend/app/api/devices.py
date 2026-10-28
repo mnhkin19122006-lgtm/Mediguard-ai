@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
+from app.core.datetime_utils import utc_now
 from app.database import get_db
 from app.models.device_event import DeviceEvent
 from app.models.interaction_log import InteractionLog
@@ -29,7 +30,7 @@ def receive_device_event(payload: DeviceEventPayload, db: Session = Depends(get_
         event_name=payload.event_name,
         compartment_index=payload.compartment_index,
         raw_payload=payload.raw_payload,
-        created_at=datetime.utcnow()
+        created_at=utc_now()
     )
     db.add(dev_event)
 
@@ -40,7 +41,7 @@ def receive_device_event(payload: DeviceEventPayload, db: Session = Depends(get_
         event_type="device_recorded",
         device_action=f"IOT_{payload.event_name}",
         notes=f"Hộp thuốc {payload.device_id} ghi nhận sự kiện mở ngăn số {payload.compartment_index}",
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.add(log)
     db.commit()

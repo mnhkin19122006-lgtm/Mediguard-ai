@@ -5,15 +5,20 @@ echo ======================================================
 echo           DANG KHOI DONG MEDIGUARD AI
 echo ======================================================
 
-echo [1/2] Dang bat Backend FastAPI (Port 8000)...
-start "MediGuard Backend" cmd /k "chcp 65001 > nul && cd /d %~dp0backend && set "PYTHONIOENCODING=utf-8" && set "PYTHONUTF8=1" && python -X utf8 main.py"
+set PY_CMD=python
+if exist "C:\Users\Admin\anaconda3\python.exe" (
+    set PY_CMD=C:\Users\Admin\anaconda3\python.exe
+)
 
-timeout /t 2 /nobreak > nul
+echo [1/2] Dang bat Backend FastAPI (Port 8000)...
+start "MediGuard Backend" cmd /k "chcp 65001 > nul && cd /d %~dp0backend && set PYTHONIOENCODING=utf-8 && set PYTHONUTF8=1 && %PY_CMD% -X utf8 main.py"
+
+timeout /t 3 /nobreak > nul
 
 echo [2/2] Dang bat Frontend React Kiosk (Port 5173)...
 start "MediGuard Frontend" cmd /k "chcp 65001 > nul && cd /d %~dp0frontend && npm run dev"
 
-timeout /t 1 /nobreak > nul
+timeout /t 2 /nobreak > nul
 
 echo Mo trinh duyet...
 start http://localhost:5173

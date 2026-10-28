@@ -4,6 +4,7 @@
 # ==============================================================================
 
 from datetime import datetime
+from app.core.datetime_utils import utc_now
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, JSON, ForeignKey, Text
 from .patient import Base
 
@@ -40,4 +41,4 @@ class CallSession(Base):
     zns_pre_call_sent = Column(Boolean, default=False)
     zns_pre_call_sent_at = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)

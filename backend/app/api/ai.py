@@ -3,6 +3,7 @@ import re
 import asyncio
 import logging
 from datetime import datetime, date
+from app.core.datetime_utils import utc_now, utc_now_iso
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -488,7 +489,7 @@ async def fast_ai_reply(
                 caregiver_notified=True,
                 caregiver_confirmed=False,
                 action_taken=f"AI đã kích hoạt BÁO ĐỘNG ĐỎ ngày {today_str} và gọi khẩn tới gia đình.",
-                timestamp=datetime.utcnow()
+                timestamp=utc_now()
             )
             db.add(symptom_log)
 
@@ -497,7 +498,7 @@ async def fast_ai_reply(
                 event_type="alert",
                 response_content=user_text,
                 notes=f"AI Voice phát hiện BÁO ĐỘNG ĐỎ ngày {today_str}: {user_text}",
-                timestamp=datetime.utcnow()
+                timestamp=utc_now()
             )
             db.add(audit)
             db.commit()
@@ -506,7 +507,7 @@ async def fast_ai_reply(
                 "event": "emergency_triggered",
                 "symptom": symptom_log.to_dict(),
                 "message": f"🚨🚨 BÁO ĐỘNG ĐỎ: {elder_name} đang kêu cứu khẩn cấp lúc {now_time}!",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": utc_now_iso()
             })
 
             telegram_msg = (
@@ -613,7 +614,7 @@ async def fast_ai_reply(
                 caregiver_notified=True,
                 caregiver_confirmed=False,
                 action_taken=f"AI đã ghi nhận vào sổ theo dõi ngày {today_str} và phát tín hiệu khẩn tới gia đình.",
-                timestamp=datetime.utcnow()
+                timestamp=utc_now()
             )
             db.add(symptom_log)
 
@@ -622,7 +623,7 @@ async def fast_ai_reply(
                 event_type="alert",
                 response_content=user_text,
                 notes=f"AI Voice phát hiện triệu chứng ngày {today_str}: {detected_symptom}",
-                timestamp=datetime.utcnow()
+                timestamp=utc_now()
             )
             db.add(audit)
             db.commit()
@@ -631,7 +632,7 @@ async def fast_ai_reply(
                 "event": "symptom_reported",
                 "symptom": symptom_log.to_dict(),
                 "message": f"🚨 CẢNH BÁO: {elder_name} vừa báo triệu chứng [{detected_symptom}] lúc {now_time}!",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": utc_now_iso()
             })
 
             telegram_msg = (
@@ -746,7 +747,7 @@ async def fast_ai_reply(
                 event_type="user_responded",
                 response_content=user_text,
                 notes="Xác nhận uống thuốc thành công qua trợ lý giọng nói siêu tốc",
-                timestamp=datetime.utcnow()
+                timestamp=utc_now()
             )
             db.add(log_entry)
             db.commit()
@@ -754,7 +755,7 @@ async def fast_ai_reply(
             broadcast_sync("user_responded", {
                 "elder_id": log_elder_id,
                 "response": "Đã uống thuốc",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": utc_now_iso()
             })
 
         if is_elder:

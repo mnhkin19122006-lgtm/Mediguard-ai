@@ -3,8 +3,8 @@ import re
 import json
 import asyncio
 import logging
-from datetime import datetime, date, timedelta
-from typing import Optional, List, Dict, Any
+from datetime import datetime, date, timedelta, timezone
+from typing import Optional, List, Dict, Any, cast
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Depends, Query, status
@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.core.datetime_utils import utc_now, utc_now_iso
 from app.config import DEFAULT_VIETNAMESE_VOICE, DEFAULT_VOICE_RATE, STORAGE_DIR
 from app.models.user import User, Role
 from app.models.schedule import Schedule
@@ -168,7 +169,7 @@ def update_companion_preferences(
         "reminder_tone": payload.reminder_tone or "gentle",
         "favorite_topics": payload.favorite_topics or [],
         "custom_notes": payload.custom_notes or "",
-        "updated_at": datetime.utcnow().isoformat()
+        "updated_at": utc_now_iso()
     }
     all_prefs[str(elder_id)] = updated_dict
     _save_json_data(PREFERENCES_FILE, all_prefs)
@@ -300,19 +301,18 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
     if not req.user_speech or not req.user_speech.strip():
         raise HTTPException(status_code=400, detail="Thiếu câu nói của người dùng")
 
-    elder_id = req.elder_id
+    elder_id: int = req.elder_id if req.elder_id is not None else 1
     active_sch = None
     try:
         active_sch = db.query(Schedule).filter(Schedule.is_active == True).first()
-        if not elder_id:
-            elder_id = active_sch.elder_id if active_sch else 1
+        if req.elder_id is None and active_sch and active_sch.elder_id is not None:
+            elder_id = cast(int, active_sch.elder_id)
     except Exception as db_err:
         logger.warning("Lỗi truy vấn schedule active: %s", db_err)
         db.rollback()
-        elder_id = elder_id or 1
 
     elder = db.query(User).filter(User.id == elder_id).first()
-    raw_name = elder.full_name if elder else f"#{elder_id}"
+    raw_name = str(elder.full_name) if elder and elder.full_name else f"#{elder_id}"
     cleaned_name = re.sub(r'\(.*?\)', '', raw_name).strip()
     for prefix in ["Bác ", "Ông ", "Bà ", "Cụ "]:
         if cleaned_name.startswith(prefix):
@@ -330,7 +330,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
     # Nếu người dùng báo uống thuốc thành công, tự động ghi nhận vào InteractionLog
     if analysis.get("intent") == "CONFIRM_INTAKE":
         try:
-            recent_thresh = datetime.utcnow() - timedelta(seconds=5)
+            recent_thresh = utc_now() - timedelta(seconds=5)
             recent_confirm = db.query(InteractionLog).filter(
                 InteractionLog.elder_id == elder_id,
                 InteractionLog.event_type == "user_responded",
@@ -346,7 +346,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
                     response_content=req.user_speech,
                     notes="Xác nhận uống thuốc bằng đối thoại giọng nói AI",
                     audio_url=None,
-                    timestamp=datetime.utcnow()
+                    timestamp=utc_now()
                 )
                 db.add(log_entry)
                 db.commit()
@@ -362,7 +362,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
         # Deduplication check on retry within 5 seconds
         recent_log = None
         try:
-            recent_threshold = datetime.utcnow() - timedelta(seconds=5)
+            recent_threshold = utc_now() - timedelta(seconds=5)
             recent_log = db.query(InteractionLog).filter(
                 InteractionLog.elder_id == elder_id,
                 InteractionLog.event_type == "alert",
@@ -403,7 +403,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
             )
             telegram_ok = False
             try:
-                telegram_ok = bool(await asyncio.wait_for(send_telegram_alert(alert_msg), timeout=4.0))
+                telegram_ok = await asyncio.wait_for(send_telegram_alert(alert_msg), timeout=4.0)
             except Exception as tele_exc:
                 logger.error("Ngoại lệ khi gửi cảnh báo Telegram: %s", tele_exc)
                 telegram_ok = False
@@ -426,7 +426,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
                         caregiver_notified=telegram_ok,
                         caregiver_confirmed=False,
                         action_taken=action_text,
-                        timestamp=datetime.utcnow()
+                        timestamp=utc_now()
                     )
                     db.add(symp)
                     db.commit()
@@ -437,7 +437,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
                             "event": "symptom_reported",
                             "symptom": symp.to_dict(),
                             "message": f"🚨 CẢNH BÁO SỨC KHỎE: Bác vừa báo triệu chứng [{symp.symptom_name}] vào lúc {now_time} hôm nay!",
-                            "timestamp": datetime.utcnow().isoformat()
+                            "timestamp": utc_now_iso()
                         })
                     except Exception as bc_err:
                         logger.warning("Lỗi broadcast websocket: %s", bc_err)
@@ -450,7 +450,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
                     response_content=req.user_speech,
                     notes=f"Cảnh báo giọng nói ({today_str}): {analysis.get('warning_reason')} [{tele_status_desc}]",
                     audio_url=None,
-                    timestamp=datetime.utcnow()
+                    timestamp=utc_now()
                 )
                 db.add(log_entry)
                 db.commit()
@@ -533,8 +533,8 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
 
     # Chào hỏi hoặc hỏi thông tin nhận dạng
     elif analysis.get("intent") in ["GREETING", "IDENTITY"]:
-        final_intent = analysis.get("intent")
-        reply_text = analysis.get("reply_speech")
+        final_intent = str(analysis.get("intent") or "GREETING")
+        reply_text = str(analysis.get("reply_speech") or reply_text or "Dạ cháu chào bác ạ!")
         save_conversation_turn(elder_id, req.user_speech, reply_text, req.session_id)
 
     # Mọi câu hỏi ngoài luồng, chào hỏi, tâm sự, kiến thức hoặc không khớp intent nghiệp vụ -> chuyển đến LLM
@@ -545,7 +545,7 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
             Medication.elder_id == elder_id,
             Medication.is_active == True
         ).all()
-        med_names = [m.name for m in meds]
+        med_names: list[str] = [str(m.name) for m in meds if m.name]
 
         llm_reply = await get_smart_llm_reply(
             req.user_speech,
@@ -562,9 +562,10 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
         save_conversation_turn(elder_id, req.user_speech, reply_text, req.session_id)
 
     # Sinh âm thanh giọng đọc Chị Google cho phản hồi
-    audio_file = get_cached_tts(reply_text, voice=voice, rate=rate)
+    reply_speech_str = str(reply_text or "Cháu đã ghi nhận thông tin rồi ạ!")
+    audio_file = get_cached_tts(reply_speech_str, voice=voice, rate=rate)
     if not audio_file:
-        tts_task = asyncio.create_task(text_to_speech(reply_text, voice=voice, rate=rate))
+        tts_task = asyncio.create_task(text_to_speech(reply_speech_str, voice=voice, rate=rate))
         try:
             audio_file = await asyncio.wait_for(asyncio.shield(tts_task), timeout=1.2)
         except asyncio.TimeoutError:
@@ -578,8 +579,8 @@ async def process_voice(req: VoiceProcessRequest, db: Session = Depends(get_db))
         "intent": final_intent,
         "action": analysis.get("action", "SAFE_GENERAL_REPLY"),
         "warning_reason": analysis.get("warning_reason"),
-        "reply_speech": reply_text,
-        "reply": reply_text,
+        "reply_speech": reply_speech_str,
+        "reply": reply_speech_str,
         "steps": steps_list,
         "audio_url": f"/storage/audio_cache/{audio_file}" if audio_file else None
     }

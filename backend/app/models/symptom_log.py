@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from datetime import datetime
+from app.core.datetime_utils import utc_now
 from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, JSON, ForeignKey
 from app.database import Base
 
@@ -26,7 +27,7 @@ class SymptomLog(Base):
     caregiver_confirmed = Column(Boolean, default=False)
     confirmed_by = Column(Integer, nullable=True)
     action_taken = Column(String, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=utc_now)
 
     def to_dict(self):
         return {
@@ -66,4 +67,4 @@ class ClinicalPostOpLog(Base):
 
     structured_payload = Column(JSON, nullable=False)
     evidence_quotes_json = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)

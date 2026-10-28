@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Base Paths
@@ -47,6 +48,16 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     DEBUG: bool = True
     ENVIRONMENT: str = "development"
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, v):
+        if isinstance(v, str):
+            if v.lower() in ("release", "prod", "production", "0", "false", "no"):
+                return False
+            if v.lower() in ("debug", "dev", "development", "1", "true", "yes"):
+                return True
+        return bool(v)
 
     # Host & Port
     HOST: str = "0.0.0.0"

@@ -5,6 +5,7 @@
 
 from typing import List, Optional
 from datetime import datetime, timedelta
+from app.core.datetime_utils import utc_now
 from fastapi import APIRouter, HTTPException, Query
 from ...schemas.triage_schema import (
     TriageTicketResponse,
@@ -35,10 +36,10 @@ MOCK_TICKETS = [
         "evidence_quotes": [
             "Tôi thấy tức nghẹn ngực trái lan ra vai khoảng 20 phút nay rồi, thở hơi dốc và thấy vã mồ hôi hột ở trán..."
         ],
-        "sla_deadline": datetime.utcnow() + timedelta(minutes=8),
+        "sla_deadline": utc_now() + timedelta(minutes=8),
         "sla_remaining_minutes": 8,
         "assigned_to": "ĐD. Đặng Thanh Tâm",
-        "created_at": datetime.utcnow() - timedelta(minutes=7)
+        "created_at": utc_now() - timedelta(minutes=7)
     },
     {
         "ticket_id": "TCK-2026-0041",
@@ -57,10 +58,10 @@ MOCK_TICKETS = [
         "evidence_quotes": [
             "Từ sáng đến giờ vết mổ hạ sườn phải hơi đau nhói hơn hôm qua cô ạ, người thấy mệt và hơi âm ấm đầu đo được khoảng 37.8 độ."
         ],
-        "sla_deadline": datetime.utcnow() + timedelta(minutes=145),
+        "sla_deadline": utc_now() + timedelta(minutes=145),
         "sla_remaining_minutes": 145,
         "assigned_to": "ĐD. CKI Nguyễn Thu Hằng",
-        "created_at": datetime.utcnow() - timedelta(minutes=35)
+        "created_at": utc_now() - timedelta(minutes=35)
     }
 ]
 

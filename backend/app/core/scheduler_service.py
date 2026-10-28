@@ -7,6 +7,7 @@ MediGuard AI - Scheduler Service (Hệ thống lập lịch & Giám sát an toà
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
+from app.core.datetime_utils import utc_now, utc_now_iso
 import asyncio
 import logging
 from app.config import NO_RESPONSE_MINUTES
@@ -25,13 +26,13 @@ def check_unresponsive_elders():
     """
     db = SessionLocal()
     try:
-        cutoff_time = datetime.utcnow() - timedelta(minutes=NO_RESPONSE_MINUTES)
+        cutoff_time = utc_now() - timedelta(minutes=NO_RESPONSE_MINUTES)
         
         # 1. Lấy tất cả sự kiện 'reminder_sent' đã phát trước thời điểm cutoff
         recent_reminders = db.query(InteractionLog).filter(
             InteractionLog.event_type == "reminder_sent",
             InteractionLog.timestamp <= cutoff_time,
-            InteractionLog.timestamp >= datetime.utcnow() - timedelta(hours=3) # Trong vòng 3 tiếng gần nhất
+            InteractionLog.timestamp >= utc_now() - timedelta(hours=3) # Trong vòng 3 tiếng gần nhất
         ).all()
 
         for reminder in recent_reminders:
@@ -57,7 +58,7 @@ def check_unresponsive_elders():
                         elder_id=reminder.elder_id,
                         event_type="alert",
                         notes=f"Cảnh báo: Đã quá {NO_RESPONSE_MINUTES} phút kể từ lời nhắc mà bác chưa phản hồi.",
-                        timestamp=datetime.utcnow()
+                        timestamp=utc_now()
                     )
                     db.add(alert_log)
                     db.commit()
@@ -97,7 +98,7 @@ def check_and_trigger_scheduled_ai_calls():
     db = SessionLocal()
     try:
         now_time = datetime.now().strftime("%H:%M")
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Tìm các lịch cữ thuốc khớp giờ hiện tại
         matching_schedules = db.query(Schedule).filter(
@@ -147,7 +148,7 @@ def check_and_trigger_scheduled_ai_calls():
                     "time_period": sch.time_period,
                     "medications": med_names,
                     "approved_questions": custom_questions,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": utc_now_iso(),
                     "call_type": "TỰ ĐỘNG THEO LỊCH",
                 }
 

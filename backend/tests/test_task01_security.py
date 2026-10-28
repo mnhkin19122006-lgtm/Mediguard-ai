@@ -3,6 +3,7 @@ import io
 import uuid
 from pathlib import Path
 from datetime import datetime, date
+from app.core.datetime_utils import utc_now
 
 from fastapi.testclient import TestClient
 from main import app
@@ -32,9 +33,15 @@ def sec_env():
 
     # Dọn dẹp dữ liệu kiểm thử cũ nếu có
     usernames = ["sec_elder_1", "sec_elder_2", "sec_cg_1", "sec_cg_2", "sec_admin"]
-    for u in db.query(User).filter(User.username.in_(usernames)).all():
-        db.delete(u)
-    db.commit()
+    existing_users = db.query(User).filter(User.username.in_(usernames)).all()
+    user_ids = [u.id for u in existing_users]
+    if user_ids:
+        db.query(SymptomLog).filter(SymptomLog.elder_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(Schedule).filter((Schedule.elder_id.in_(user_ids)) | (Schedule.verified_by.in_(user_ids))).delete(synchronize_session=False)
+        db.query(Medication).filter(Medication.elder_id.in_(user_ids)).delete(synchronize_session=False)
+        for u in existing_users:
+            db.delete(u)
+        db.commit()
 
     e1 = User(
         username="sec_elder_1",
@@ -144,7 +151,7 @@ def sec_env():
         elder_id=e1.id,
         event_type="user_responded",
         response_content="Đã uống thuốc",
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.add_all([symp1, log1])
     db.commit()
@@ -179,9 +186,15 @@ def sec_env():
         pass
 
     db_clean = SessionLocal()
-    for u in db_clean.query(User).filter(User.username.in_(usernames)).all():
-        db_clean.delete(u)
-    db_clean.commit()
+    existing_clean_users = db_clean.query(User).filter(User.username.in_(usernames)).all()
+    clean_ids = [u.id for u in existing_clean_users]
+    if clean_ids:
+        db_clean.query(SymptomLog).filter(SymptomLog.elder_id.in_(clean_ids)).delete(synchronize_session=False)
+        db_clean.query(Schedule).filter((Schedule.elder_id.in_(clean_ids)) | (Schedule.verified_by.in_(clean_ids))).delete(synchronize_session=False)
+        db_clean.query(Medication).filter(Medication.elder_id.in_(clean_ids)).delete(synchronize_session=False)
+        for u in existing_clean_users:
+            db_clean.delete(u)
+        db_clean.commit()
     db_clean.close()
     db.close()
 

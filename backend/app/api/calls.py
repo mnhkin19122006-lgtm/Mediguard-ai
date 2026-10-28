@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime, date
+from app.core.datetime_utils import utc_now, utc_now_iso
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -140,7 +141,7 @@ def trigger_ai_call(req: TriggerCallRequest, db: Session = Depends(get_db)):
         "time_period": sch.time_period if sch else "Sáng",
         "medications": med_names,
         "approved_questions": customized_questions,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now_iso(),
         "call_type": req.call_type,
     }
 
@@ -187,7 +188,7 @@ async def submit_call_result(req: SubmitCallResultRequest, db: Session = Depends
         schedule_id=req.schedule_id,
         call_type="TỰ ĐỘNG THEO LỊCH",
         scheduled_time=req.scheduled_time or datetime.now().strftime("%H:%M"),
-        call_time=datetime.utcnow(),
+        call_time=utc_now(),
         call_status=req.call_status,
         duration_seconds=req.duration_seconds,
         questions_asked=json.dumps(req.questions_asked or _RUNTIME_APPROVED_QUESTIONS, ensure_ascii=False),
@@ -215,7 +216,7 @@ async def submit_call_result(req: SubmitCallResultRequest, db: Session = Depends
         response_content="Đã trả lời cuộc gọi AI" if req.call_status == CallStatus.COMPLETED else "Không nghe máy",
         device_action="AI_VOICE_CALL",
         notes=f"[Báo cáo cuộc gọi AI #{call_report.id}] {report_data['summary_report'][:200]}",
-        timestamp=datetime.utcnow(),
+        timestamp=utc_now(),
     )
     db.add(audit_log)
     db.commit()
@@ -400,7 +401,7 @@ def resolve_callback(
         raise HTTPException(status_code=404, detail="Không tìm thấy báo cáo cuộc gọi")
 
     report.handled_by_staff = True
-    report.handled_at = datetime.utcnow()
+    report.handled_at = utc_now()
     report.handled_by_name = req.handled_by_name or "Nhân viên y tế trực"
     report.handled_by_user_id = req.handled_by_user_id
     report.staff_notes = req.staff_notes
@@ -414,7 +415,7 @@ def resolve_callback(
         confirmed_by=req.handled_by_user_id or 2,
         response_content="Nhân viên y tế đã gọi lại hỗ trợ",
         notes=f"Đã xử lý can thiệp cho cuộc gọi #{report.id}: {req.staff_notes}",
-        timestamp=datetime.utcnow(),
+        timestamp=utc_now(),
     )
     db.add(audit_log)
     db.commit()

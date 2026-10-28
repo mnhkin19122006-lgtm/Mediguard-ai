@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from datetime import datetime
+from app.core.datetime_utils import utc_now
 from sqlalchemy import Column, String, Integer, DateTime, JSON, ForeignKey, Text
 from .patient import Base
 
@@ -40,5 +41,5 @@ class TriageTicket(Base):
     resolved_by_user_id = Column(String(100), nullable=True)
     resolved_at = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

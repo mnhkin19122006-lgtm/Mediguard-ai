@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from datetime import date, datetime
+from app.core.datetime_utils import utc_now
 from sqlalchemy import Column, String, Integer, Date, DateTime, Boolean, Text
 from app.database import Base
 
@@ -37,8 +38,8 @@ class Patient(Base):
 
     # Tuân thủ Nghị định 13/2023/NĐ-CP (Consent & Bảo vệ dữ liệu cá nhân)
     consent_voice_monitoring = Column(Boolean, default=True)
-    consent_recorded_at = Column(DateTime, default=datetime.utcnow)
+    consent_recorded_at = Column(DateTime, default=utc_now)
     preferred_call_time_window = Column(String(50), default="09:00-11:00")  # Khung giờ ưu tiên
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

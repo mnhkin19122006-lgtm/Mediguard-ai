@@ -28,6 +28,16 @@ backend/storage/reference_images/*
 backend/storage/captured_images/*
 !backend/storage/captured_images/.gitkeep
 
+backend/storage/uploaded_checks/*
+!backend/storage/uploaded_checks/.gitkeep
+
+backend/storage/zalo_messages.json
+backend/storage/companion_sessions.json
+backend/storage/companion_preferences.json
+backend/*.mp3
+cloudflared.exe
+phone_access.html
+
 # 4. PYTHON & FASTAPI ARTIFACTS
 __pycache__/
 *.py[cod]

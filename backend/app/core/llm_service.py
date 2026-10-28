@@ -15,6 +15,7 @@ import urllib.request
 import urllib.error
 import re
 from datetime import datetime
+from app.core.datetime_utils import utc_now, utc_now_iso
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 from dotenv import load_dotenv
@@ -89,13 +90,13 @@ def save_conversation_turn(elder_id: int, user_text: str, ai_reply: str, session
                 "session_id": session_id,
                 "history": [],
                 "sessions": {},
-                "updated_at": datetime.utcnow().isoformat()
+                "updated_at": utc_now_iso()
             }
 
         turn_obj = {
             "user": user_text.strip(),
             "ai": ai_reply.strip(),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": utc_now_iso()
         }
 
         # Lưu vào lịch sử chung của elder (tối đa 20 lượt)
@@ -103,7 +104,7 @@ def save_conversation_turn(elder_id: int, user_text: str, ai_reply: str, session
         elder_history.append(turn_obj)
         data[elder_key]["history"] = elder_history[-20:]
         data[elder_key]["session_id"] = session_id or data[elder_key].get("session_id")
-        data[elder_key]["updated_at"] = datetime.utcnow().isoformat()
+        data[elder_key]["updated_at"] = utc_now_iso()
 
         # Nếu có session_id, lưu đồng thời vào khoang phiên riêng biệt
         if session_id:

@@ -2,6 +2,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, date
+from app.core.datetime_utils import utc_now, utc_now_iso
 from pathlib import Path
 import shutil
 import uuid
@@ -77,7 +78,7 @@ def get_schedules_with_status(
         ).all()
 
         # Kiểm tra các sự kiện độc lập trong ngày hôm nay
-        start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_day = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
         logs = db.query(InteractionLog).filter(
             InteractionLog.schedule_id == sch.id,
             InteractionLog.timestamp >= start_of_day
@@ -223,7 +224,7 @@ def create_schedule(
         target_time=sch_in.target_time,
         notes=sch_in.notes,
         verified_by=sch_in.verified_by,
-        verified_at=datetime.utcnow(),
+        verified_at=utc_now(),
         is_active=sch_in.is_active
     )
     db.add(db_sch)
@@ -264,7 +265,7 @@ async def trigger_schedule_reminder(
         event_type="reminder_sent",
         response_content=speech_text,
         audio_url=f"/storage/audio_cache/{audio_file}" if audio_file else None,
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.add(log_entry)
     db.commit()
@@ -317,7 +318,7 @@ async def elder_respond(
             response_content="Đã nghe nhắc và uống thuốc",
             audio_url=f"/storage/audio_cache/{audio_file}" if audio_file else None,
             notes=f"Đã ghi nhận các thuốc: {', '.join(med_names)}",
-            timestamp=datetime.utcnow()
+            timestamp=utc_now()
         )
         db.add(log1)
         db.commit()
@@ -327,7 +328,7 @@ async def elder_respond(
             "response_type": "HEARD",
             "time_period": sch.time_period,
             "medications": med_names,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": utc_now_iso()
         })
 
         # TỰ ĐỘNG GỬI BÁO CÁO THẲNG QUA TIN NHẮN ZALO CHO CON CÁI
@@ -376,7 +377,7 @@ async def elder_respond(
             event_type="user_responded",
             response_content="Chưa chắc chắn về thuốc",
             notes="Người già báo chưa chắc chắn, cần người nhà hỗ trợ kiểm tra",
-            timestamp=datetime.utcnow()
+            timestamp=utc_now()
         )
         db.add(log)
         db.commit()
@@ -385,7 +386,7 @@ async def elder_respond(
             "schedule_id": sch.id,
             "response_type": "UNSURE",
             "time_period": sch.time_period,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": utc_now_iso()
         })
 
         # Báo Telegram cho người nhà
@@ -410,7 +411,7 @@ async def elder_respond(
             event_type="alert",
             response_content="Yêu cầu trợ giúp khẩn cấp",
             notes="Người cao tuổi bấm nút CẦN GIÚP ĐỠ",
-            timestamp=datetime.utcnow()
+            timestamp=utc_now()
         )
         db.add(log)
         db.commit()
@@ -419,7 +420,7 @@ async def elder_respond(
             "schedule_id": sch.id,
             "response_type": "HELP",
             "time_period": sch.time_period,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": utc_now_iso()
         })
 
         # Báo động đỏ Telegram
